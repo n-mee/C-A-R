@@ -1,6 +1,5 @@
 package ui;
 
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -9,11 +8,6 @@ import javafx.scene.layout.VBox;
 import repository.RoomRepository;
 
 final class JavaFxScreenFactory {
-    static final String TITLE_STYLE =
-            "-fx-font-size: 22px; -fx-font-weight: bold;";
-    static final String PRIMARY_BUTTON_STYLE =
-            "-fx-font-size: 14px; -fx-padding: 9 14 9 14;";
-
     private final RoomRepository roomRepository;
 
     JavaFxScreenFactory(RoomRepository roomRepository) {
@@ -42,18 +36,17 @@ final class JavaFxScreenFactory {
         TextArea result = new TextArea();
         result.setEditable(false);
         result.setWrapText(true);
-        result.setPrefHeight(420);
+        result.setPrefHeight(320);
         result.setMaxHeight(Double.MAX_VALUE);
-        result.setStyle("-fx-font-family: monospace; -fx-font-size: 13px;");
+        result.getStyleClass().add("result-area");
         return result;
     }
 
     VBox createScreen(Node... controls) {
-        VBox layout = new VBox(14);
+        VBox layout = new VBox(18);
         layout.getChildren().addAll(controls);
-        layout.setPadding(new Insets(32));
         layout.setFillWidth(true);
-        layout.setStyle("-fx-background-color: #f7f9fc;");
+        layout.getStyleClass().add("screen");
         for (Node control : controls) {
             if (control instanceof javafx.scene.layout.Region region) {
                 region.setMaxWidth(Double.MAX_VALUE);
@@ -65,7 +58,6 @@ final class JavaFxScreenFactory {
     Button createBackButton(Runnable action) {
         Button backButton = new Button("Back to dashboard");
         backButton.setMaxWidth(Double.MAX_VALUE);
-        backButton.setStyle(PRIMARY_BUTTON_STYLE);
         backButton.setOnAction(event -> action.run());
         return backButton;
     }

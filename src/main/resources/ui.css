@@ -1,0 +1,60 @@
+.root {
+    -fx-background-color: #f7f9fc;
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+
+.dashboard {
+    -fx-padding: 24px;
+}
+
+.screen {
+    -fx-padding: 20px;
+}
+
+.app-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2937;
+}
+
+.screen-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1f2937;
+}
+
+.subtitle,
+.status {
+    -fx-text-fill: #4b5563;
+}
+
+.button {
+    -fx-font-size: 13px;
+    -fx-padding: 9px 12px;
+    -fx-min-height: 36px;
+}
+
+.text-field,
+.combo-box {
+    -fx-pref-height: 36px;
+}
+
+.result {
+    -fx-font-size: 13px;
+    -fx-padding: 10px;
+}
+
+.result-area {
+    -fx-font-family: "Consolas", "DejaVu Sans Mono", monospace;
+    -fx-font-size: 13px;
+}
+
+.available {
+    -fx-text-fill: #1b5e20;
+}
+
+.occupied,
+.error {
+    -fx-text-fill: #b71c1c;
+}

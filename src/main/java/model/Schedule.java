@@ -1,10 +1,12 @@
 package model;
 
+import java.time.LocalTime;
+
 public class Schedule {
     private final String day;
     private final String room;
-    private final String start;
-    private final String end;
+    private final LocalTime start;
+    private final LocalTime end;
     private final String subject;
     private final String section;
     private final String professor;
@@ -12,8 +14,8 @@ public class Schedule {
     public Schedule (            
             String day,
             String room,
-            String start,
-            String end,
+            LocalTime start,
+            LocalTime end,
             String subject,
             String section,
             String professor ) {
@@ -34,11 +36,11 @@ public class Schedule {
         return room;
     }
 
-    public String getStart() {
+    public LocalTime getStart() {
         return start;
     }
 
-    public String getEnd() {
+    public LocalTime getEnd() {
         return end;
     }
 

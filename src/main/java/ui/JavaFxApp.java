@@ -9,7 +9,6 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.Node;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import model.AvailabilityResult;
@@ -25,16 +24,14 @@ import java.util.List;
 import java.util.Map;
 
 public class JavaFxApp extends Application {
-    private static final String TITLE_STYLE =
-            "-fx-font-size: 22px; -fx-font-weight: bold;";
-    private static final String PRIMARY_BUTTON_STYLE =
-            "-fx-font-size: 14px; -fx-padding: 9 14 9 14;";
     private static final DateTimeFormatter INPUT_TIME =
             DateTimeFormatter.ofPattern("h:mm a");
 
     private final ScheduleService service =
             new ScheduleService(new ScheduleRepository(), new RoomRepository());
     private final RoomRepository roomRepository = new RoomRepository();
+    private final JavaFxScreenFactory screenFactory =
+            new JavaFxScreenFactory(roomRepository);
     private Stage stage;
 
     @Override
@@ -77,19 +74,10 @@ public class JavaFxApp extends Application {
 
     private void showAvailability() {
         Label title = new Label("Check Classroom Availability");
-        title.setStyle(TITLE_STYLE);
+        title.setStyle(JavaFxScreenFactory.TITLE_STYLE);
 
-        ComboBox<String> dayBox = new ComboBox<>();
-        dayBox.getItems().addAll(
-                "MONDAY", "TUESDAY", "WEDNESDAY",
-                "THURSDAY", "FRIDAY", "SATURDAY");
-        dayBox.setPromptText("Select day");
-
-        ComboBox<String> roomBox = new ComboBox<>();
-        roomRepository.findAll().stream()
-                .map(Room::number)
-                .forEach(roomBox.getItems()::add);
-        roomBox.setPromptText("Select room");
+        ComboBox<String> dayBox = screenFactory.createDayBox();
+        ComboBox<String> roomBox = screenFactory.createRoomBox();
 
         TextField startField = new TextField();
         startField.setPromptText("Start time (e.g. 8:00 AM)");
@@ -99,22 +87,18 @@ public class JavaFxApp extends Application {
 
         Label result = new Label("Enter the details and select Check.");
         result.setWrapText(true);
-        result.setMaxWidth(Double.MAX_VALUE);
 
         Button checkButton = new Button("Check availability");
         checkButton.setMaxWidth(Double.MAX_VALUE);
-        checkButton.setStyle(PRIMARY_BUTTON_STYLE);
+        checkButton.setStyle(JavaFxScreenFactory.PRIMARY_BUTTON_STYLE);
         checkButton.setOnAction(event -> checkAvailability(
                 dayBox, roomBox, startField, endField, result));
 
-        Button backButton = new Button("Back to dashboard");
-        backButton.setMaxWidth(Double.MAX_VALUE);
-        backButton.setOnAction(event -> showDashboard());
+        Button backButton = screenFactory.createBackButton(this::showDashboard);
 
         VBox layout = new VBox(
                 14, title, dayBox, roomBox, startField, endField,
                 checkButton, result, backButton);
-        layout.setPadding(new Insets(32));
         layout.setAlignment(Pos.CENTER);
 
         setScene("Check Classroom Availability", layout, 520, 520);
@@ -146,7 +130,7 @@ public class JavaFxApp extends Application {
             result.setStyle(availability.available()
                     ? "-fx-text-fill: #1b5e20;"
                     : "-fx-text-fill: #b71c1c;");
-            result.setText(formatAvailability(
+            result.setText(JavaFxFormatter.availability(
                     availability, dayBox.getValue(), roomBox.getValue(), start, end));
         } catch (DateTimeParseException exception) {
             result.setStyle("-fx-text-fill: #b71c1c;");
@@ -154,54 +138,18 @@ public class JavaFxApp extends Application {
         }
     }
 
-    private String formatAvailability(
-            AvailabilityResult availability,
-            String day,
-            String room,
-            LocalTime start,
-            LocalTime end) {
-        String time = start.format(INPUT_TIME) + " - " + end.format(INPUT_TIME);
-        if (availability.available()) {
-            return String.format("%s, room %s, %s is AVAILABLE.%n"
-                    + "No scheduled class or activity overlaps this time.",
-                    day, room, time);
-        }
-
-        StringBuilder message = new StringBuilder(String.format(
-                "%s, room %s, %s is OCCUPIED.%nConflicts:%n",
-                day, room, time));
-        availability.conflicts().forEach(schedule -> message.append("- ")
-                .append(schedule.getSubject())
-                .append(" (")
-                .append(schedule.getSection())
-                .append(")")
-                .append(System.lineSeparator()));
-
-        List<Room> alternatives = availability.alternatives();
-        if (alternatives.isEmpty()) {
-            message.append("No alternative room was found.");
-        } else {
-            message.append("Alternative rooms: ");
-            message.append(alternatives.stream()
-                    .map(Room::number)
-                    .reduce((first, second) -> first + ", " + second)
-                    .orElse("None"));
-        }
-        return message.toString();
-    }
-
     private void showRoomSchedule() {
         Label title = new Label("View Room Schedule");
-        title.setStyle(TITLE_STYLE);
+        title.setStyle(JavaFxScreenFactory.TITLE_STYLE);
 
-        ComboBox<String> dayBox = createDayBox();
-        ComboBox<String> roomBox = createRoomBox();
-        TextArea result = createResultArea();
+        ComboBox<String> dayBox = screenFactory.createDayBox();
+        ComboBox<String> roomBox = screenFactory.createRoomBox();
+        TextArea result = screenFactory.createResultArea();
         result.setText("Select a day and room.");
 
         Button viewButton = new Button("View schedule");
         viewButton.setMaxWidth(Double.MAX_VALUE);
-        viewButton.setStyle(PRIMARY_BUTTON_STYLE);
+        viewButton.setStyle(JavaFxScreenFactory.PRIMARY_BUTTON_STYLE);
         viewButton.setOnAction(event -> {
             if (dayBox.getValue() == null || roomBox.getValue() == null) {
                 result.setText("Please select both a day and room.");
@@ -216,17 +164,19 @@ public class JavaFxApp extends Application {
                 return;
             }
 
-            result.setText(formatSchedules(
-                    dayBox.getValue(), roomBox.getValue(), schedules));
+            result.setText(JavaFxFormatter.roomSchedule(
+                    dayBox.getValue(), roomBox.getValue(),
+                    service.locationOf(roomBox.getValue()), schedules));
         });
 
-        setScene("View Room Schedule", createScreen(
-                title, dayBox, roomBox, viewButton, result, backButton()), 620, 620);
+        setScene("View Room Schedule", screenFactory.createScreen(
+                title, dayBox, roomBox, viewButton, result,
+                screenFactory.createBackButton(this::showDashboard)), 620, 620);
     }
 
     private void showSearch() {
         Label title = new Label("Search Schedules");
-        title.setStyle(TITLE_STYLE);
+        title.setStyle(JavaFxScreenFactory.TITLE_STYLE);
 
         ComboBox<String> typeBox = new ComboBox<>();
         typeBox.getItems().addAll("Subject", "Section", "Professor");
@@ -235,12 +185,12 @@ public class JavaFxApp extends Application {
         TextField queryField = new TextField();
         queryField.setPromptText("Enter search text");
 
-        TextArea result = createResultArea();
+        TextArea result = screenFactory.createResultArea();
         result.setText("Choose a search field and enter a query.");
 
         Button searchButton = new Button("Search");
         searchButton.setMaxWidth(Double.MAX_VALUE);
-        searchButton.setStyle(PRIMARY_BUTTON_STYLE);
+        searchButton.setStyle(JavaFxScreenFactory.PRIMARY_BUTTON_STYLE);
         searchButton.setOnAction(event -> {
             if (typeBox.getValue() == null || queryField.getText().isBlank()) {
                 result.setText("Please choose a search field and enter a query.");
@@ -259,24 +209,25 @@ public class JavaFxApp extends Application {
                 return;
             }
 
-            result.setText(formatSearchResults(schedules));
+            result.setText(JavaFxFormatter.searchResults(schedules, roomLocations()));
         });
 
-        setScene("Search Schedules", createScreen(
-                title, typeBox, queryField, searchButton, result, backButton()), 700, 650);
+        setScene("Search Schedules", screenFactory.createScreen(
+                title, typeBox, queryField, searchButton, result,
+                screenFactory.createBackButton(this::showDashboard)), 700, 650);
     }
 
     private void showDaySchedules() {
         Label title = new Label("View All Room Schedules");
-        title.setStyle(TITLE_STYLE);
+        title.setStyle(JavaFxScreenFactory.TITLE_STYLE);
 
-        ComboBox<String> dayBox = createDayBox();
-        TextArea result = createResultArea();
+        ComboBox<String> dayBox = screenFactory.createDayBox();
+        TextArea result = screenFactory.createResultArea();
         result.setText("Select a day.");
 
         Button viewButton = new Button("View schedules");
         viewButton.setMaxWidth(Double.MAX_VALUE);
-        viewButton.setStyle(PRIMARY_BUTTON_STYLE);
+        viewButton.setStyle(JavaFxScreenFactory.PRIMARY_BUTTON_STYLE);
         viewButton.setOnAction(event -> {
             if (dayBox.getValue() == null) {
                 result.setText("Please select a day.");
@@ -290,104 +241,19 @@ public class JavaFxApp extends Application {
                 return;
             }
 
-            StringBuilder output = new StringBuilder(
-                    "Schedules for all rooms on " + dayBox.getValue() + ":\n");
-            schedules.forEach((room, roomSchedules) -> output
-                    .append("\nROOM: ").append(room)
-                    .append(" (").append(service.locationOf(room)).append(")\n")
-                    .append(formatScheduleList(roomSchedules)));
-            result.setText(output.toString());
+            result.setText(JavaFxFormatter.allRoomSchedules(
+                    dayBox.getValue(), schedules, roomLocations()));
         });
 
-        setScene("View All Room Schedules", createScreen(
-                title, dayBox, viewButton, result, backButton()), 760, 700);
+        setScene("View All Room Schedules", screenFactory.createScreen(
+                title, dayBox, viewButton, result,
+                screenFactory.createBackButton(this::showDashboard)), 760, 700);
     }
 
-    private ComboBox<String> createDayBox() {
-        ComboBox<String> dayBox = new ComboBox<>();
-        dayBox.getItems().addAll(
-                "MONDAY", "TUESDAY", "WEDNESDAY",
-                "THURSDAY", "FRIDAY", "SATURDAY");
-        dayBox.setPromptText("Select day");
-        return dayBox;
-    }
-
-    private ComboBox<String> createRoomBox() {
-        ComboBox<String> roomBox = new ComboBox<>();
-        roomRepository.findAll().stream()
-                .map(Room::number)
-                .forEach(roomBox.getItems()::add);
-        roomBox.setPromptText("Select room");
-        return roomBox;
-    }
-
-    private TextArea createResultArea() {
-        TextArea result = new TextArea();
-        result.setEditable(false);
-        result.setWrapText(true);
-        result.setPrefHeight(420);
-        result.setMaxHeight(Double.MAX_VALUE);
-        result.setStyle("-fx-font-family: monospace; -fx-font-size: 13px;");
-        return result;
-    }
-
-    private VBox createScreen(Node... controls) {
-        VBox layout = new VBox(14);
-        layout.getChildren().addAll(controls);
-        layout.setPadding(new Insets(32));
-        layout.setFillWidth(true);
-        layout.setStyle("-fx-background-color: #f7f9fc;");
-        for (Node control : controls) {
-            if (control instanceof javafx.scene.layout.Region region) {
-                region.setMaxWidth(Double.MAX_VALUE);
-            }
-        }
-        return layout;
-    }
-
-    private Button backButton() {
-        Button backButton = new Button("Back to dashboard");
-        backButton.setMaxWidth(Double.MAX_VALUE);
-        backButton.setStyle(PRIMARY_BUTTON_STYLE);
-        backButton.setOnAction(event -> showDashboard());
-        return backButton;
-    }
-
-    private String formatSchedules(
-            String day, String room, List<model.Schedule> schedules) {
-        return "DAY: " + day + "\nROOM: " + room + " ("
-                + service.locationOf(room) + ")\n\n"
-                + formatScheduleList(schedules);
-    }
-
-    private String formatSearchResults(List<model.Schedule> schedules) {
-        StringBuilder output = new StringBuilder("Matching schedules:\n");
-        for (model.Schedule schedule : schedules) {
-            output.append("\nDAY: ").append(schedule.getDay())
-                    .append("\nROOM: ").append(schedule.getRoom())
-                    .append(" (").append(service.locationOf(schedule.getRoom()))
-                    .append(")\n")
-                    .append(formatSchedule(schedule));
-        }
-        return output.toString();
-    }
-
-    private String formatScheduleList(List<model.Schedule> schedules) {
-        StringBuilder output = new StringBuilder();
-        schedules.forEach(schedule -> output.append(formatSchedule(schedule)));
-        return output.toString();
-    }
-
-    private String formatSchedule(model.Schedule schedule) {
-        return "Time: " + formatTime(schedule.getStart()) + " - "
-                + formatTime(schedule.getEnd()) + "\n"
-                + "Subject: " + schedule.getSubject() + "\n"
-                + "Section: " + schedule.getSection() + "\n"
-                + "Professor: " + schedule.getProfessor() + "\n\n";
-    }
-
-    private String formatTime(LocalTime time) {
-        return time.format(INPUT_TIME);
+    private Map<String, String> roomLocations() {
+        return roomRepository.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Room::number, Room::location));
     }
 
     private void setScene(String title, VBox layout, double width, double height) {

@@ -1,0 +1,118 @@
+name: Release application images
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: classroom-availability-linux
+            archive_name: classroom-availability-linux.tar.gz
+          - os: windows-latest
+            artifact_name: classroom-availability-windows
+            archive_name: classroom-availability-windows.zip
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Build application input on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mvn --batch-mode --no-transfer-progress -DskipTests package dependency:copy-dependencies \
+            -DincludeScope=runtime \
+            -DoutputDirectory=package-input
+          cp target/pilot-project-*.jar package-input/
+
+      - name: Build application input on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mvn --batch-mode --no-transfer-progress -Pwindows -DskipTests package dependency:copy-dependencies `
+            -DincludeScope=runtime `
+            -DoutputDirectory=package-input
+          Copy-Item target\pilot-project-*.jar package-input\
+
+      - name: Create Linux application image
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          jpackage \
+            --type app-image \
+            --name ClassroomAvailability \
+            --input package-input \
+            --main-jar "$(basename target/pilot-project-*.jar)" \
+            --main-class ui.JavaFxApp \
+            --dest dist \
+            --app-version "${GITHUB_REF_NAME#v}" \
+            --vendor "C-A-R"
+
+      - name: Create Windows application image
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $mainJar = (Get-ChildItem target\pilot-project-*.jar | Select-Object -First 1).Name
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          jpackage `
+            --type app-image `
+            --name ClassroomAvailability `
+            --input package-input `
+            --main-jar $mainJar `
+            --main-class ui.JavaFxApp `
+            --dest dist `
+            --app-version $version `
+            --vendor "C-A-R"
+
+      - name: Archive Linux application image
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          tar -czf "${{ matrix.archive_name }}" -C dist ClassroomAvailability
+
+      - name: Archive Windows application image
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\ClassroomAvailability -DestinationPath "${{ matrix.archive_name }}"
+
+      - name: Upload packaged application
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.archive_name }}
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download packaged applications
+        uses: actions/download-artifact@v4
+        with:
+          pattern: classroom-availability-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

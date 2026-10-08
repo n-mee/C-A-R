@@ -41,6 +41,8 @@ jobs:
             -DincludeScope=runtime \
             -DoutputDirectory=package-input
           cp target/pilot-project-*.jar package-input/
+          mkdir javafx-modules
+          cp package-input/javafx-*.jar javafx-modules/
 
       - name: Build application input on Windows
         if: runner.os == 'Windows'
@@ -50,6 +52,8 @@ jobs:
             -DincludeScope=runtime `
             -DoutputDirectory=package-input
           Copy-Item target\pilot-project-*.jar package-input\
+          New-Item -ItemType Directory -Force javafx-modules | Out-Null
+          Copy-Item package-input\javafx-*.jar javafx-modules\
 
       - name: Create Linux application image
         if: runner.os == 'Linux'
@@ -61,6 +65,8 @@ jobs:
             --input package-input \
             --main-jar "$(basename target/pilot-project-*.jar)" \
             --main-class ui.JavaFxApp \
+            --module-path javafx-modules \
+            --add-modules javafx.controls,javafx.graphics,javafx.base \
             --dest dist \
             --app-version "${GITHUB_REF_NAME#v}" \
             --vendor "C-A-R"
@@ -77,6 +83,8 @@ jobs:
             --input package-input `
             --main-jar $mainJar `
             --main-class ui.JavaFxApp `
+            --module-path javafx-modules `
+            --add-modules javafx.controls,javafx.graphics,javafx.base `
             --dest dist `
             --app-version $version `
             --vendor "C-A-R"

@@ -16,7 +16,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
         <javafx.version>17.0.2</javafx.version>
-        <javafx.platform>linux</javafx.platform>
     </properties>
 
     <dependencies>
@@ -44,7 +43,7 @@
             <id>linux</id>
             <activation>
                 <os>
-                    <family>unix</family>
+                    <name>Linux</name>
                 </os>
             </activation>
             <properties>
@@ -77,6 +76,14 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>ui.JavaFxApp</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>

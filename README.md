@@ -128,8 +128,11 @@ mvn javafx:run
 ### CLI interface
 
 ```bash
-mvn exec:java -Dexec.mainClass=Main
+mvn compile exec:java
 ```
+
+The CLI uses standard Java input/output and is platform-independent. Maven
+selects the JavaFX classifier for the host platform on Linux or Windows.
 
 ## Running tests
 
@@ -140,29 +143,22 @@ mvn clean test
 The tests cover CSV validation, scheduling behavior, CLI workflows, and
 JavaFX output formatting without requiring a display.
 
-## Windows packaging check
+## Platform-specific JavaFX builds
 
-On Windows, the Maven profile selects the Windows JavaFX dependencies:
+The Maven profile selects the JavaFX dependencies for the host platform:
 
 ```bash
+mvn -DskipTests package
+```
+
+To select a platform explicitly, use one of:
+
+```bash
+mvn -Plinux -DskipTests package
 mvn -Pwindows -DskipTests package
 ```
 
-On Linux, the default configuration selects the Linux JavaFX dependencies.
-
 ## GitHub Releases
-
-Pushing a version tag beginning with `v` starts the release workflow. The
-workflow builds a self-contained application image on Linux and Windows,
-including the Java runtime, JavaFX libraries, application code, and resources.
-It then attaches one archive for each platform to the GitHub Release.
-
-For example:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
 
 Download the archive for the target operating system from the resulting GitHub
 Release and extract it. Start the application using:

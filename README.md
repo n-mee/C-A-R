@@ -68,94 +68,97 @@ The JavaFX interface is the primary user interface. The CLI is intended mainly
 for developer use, manual testing, and as a manually launched fallback when
 the JavaFX interface cannot be loaded. The two launchers create their own UI
 objects and service instances, but both use the same repository and service
-logic:
+logic.
+
+### Primary flow: JavaFX interface
 
 ```mermaid
 flowchart TD
-    A([Program starts]) --> B{Launcher}
+    A([JavaFxApp starts]) --> B[Create JavaFX service and repositories]
+    B --> C[start Stage and show dashboard]
+    C --> D{Dashboard action}
 
-    B -->|Primary| C[JavaFxApp]
-    B -->|Developer / manual fallback| D[Main]
+    D -->|Check availability| E[Show availability form]
+    E --> F[Read day, room, start time, and end time]
+    F --> G{Valid input and end after start?}
+    G -->|No| H[Show validation message on form]
+    H --> E
+    G -->|Yes| I[ScheduleService.checkAvailability]
+    I --> J{Overlapping schedule exists?}
+    J -->|No| K[Format AVAILABLE result]
+    J -->|Yes| L[Find conflicts and same-area alternatives]
+    L --> M[Format OCCUPIED result]
+    K --> N[Display result]
+    M --> N
+    N --> E
+    E -->|Back| C
 
-    subgraph FX[JavaFX application]
-        C --> E[Create JavaFX service and repositories]
-        E --> F[start Stage and show dashboard]
-        F --> G{Dashboard action}
+    D -->|View room schedule| O[Show room/day form]
+    O --> P[Find schedules for selected room and day]
+    P --> Q[Format and display room schedule]
+    Q --> O
+    O -->|Back| C
 
-        G -->|Check availability| H[Show availability form]
-        H --> I[Read day, room, start time, and end time]
-        I --> J{Valid input and end after start?}
-        J -->|No| K[Show validation message on form]
-        K --> H
-        J -->|Yes| L[ScheduleService.checkAvailability]
-        L --> M{Overlapping schedule exists?}
-        M -->|No| N[Format AVAILABLE result]
-        M -->|Yes| O[Find conflicts and same-area alternatives]
-        O --> P[Format OCCUPIED result]
-        N --> Q[Display result]
-        P --> Q
-        Q --> H
-        H -->|Back| F
+    D -->|Search schedules| R[Show search form]
+    R --> S[Choose subject, section, or professor and enter query]
+    S --> T[Run matching ScheduleService search]
+    T --> U[Format and display results]
+    U --> R
+    R -->|Back| C
 
-        G -->|View room schedule| R[Show room/day form]
-        R --> S[Find schedules for selected room and day]
-        S --> T[Format and display room schedule]
-        T --> R
-        R -->|Back| F
+    D -->|View all room schedules| V[Show day selector]
+    V --> W[Group schedules by room for selected day]
+    W --> X[Format and display day schedules]
+    X --> V
+    V -->|Back| C
 
-        G -->|Search schedules| U[Show search form]
-        U --> V[Choose subject, section, or professor and enter query]
-        V --> W[Run matching ScheduleService search]
-        W --> X[Format and display results]
-        X --> U
-        U -->|Back| F
+    D -->|Close window| Y([JavaFX program ends])
+```
 
-        G -->|View all room schedules| Y[Show day selector]
-        Y --> Z[Group schedules by room for selected day]
-        Z --> AA[Format and display day schedules]
-        AA --> Y
-        Y -->|Back| F
+If JavaFX cannot be loaded, a developer can manually launch `Main` to use the
+CLI. The CLI does not start automatically from `JavaFxApp`; it is a separate
+entry point used for manual testing and fallback operation. It creates its own
+`ScheduleRepository`, `RoomRepository`, `ScheduleService`, and `ConsoleUI`,
+then runs a text-based menu loop:
 
-        G -->|Close window| AB([JavaFX program ends])
-    end
+### Developer and fallback flow: CLI
 
-    subgraph CLI[CLI application - developer and fallback only]
-        D --> AC[Create ScheduleRepository, RoomRepository, ScheduleService, and ConsoleUI]
-        AC --> AD[Start ConsoleUI menu loop]
-        AD --> AE{Menu choice}
+```mermaid
+flowchart TD
+    A([Main starts]) --> B[Create ScheduleRepository, RoomRepository, ScheduleService, and ConsoleUI]
+    B --> C[Start ConsoleUI menu loop]
+    C --> D{Menu choice}
 
-        AE -->|1. Check availability| AF[Read day, room, start time, and end time]
-        AE -->|2. View room schedule| AG[Read day and room]
-        AE -->|3. Search schedules| AH[Read search field and query]
-        AE -->|4. View all room schedules| AI[Read day]
+    D -->|1. Check availability| E[Read day, room, start time, and end time]
+    E --> F{Valid input and end after start?}
+    F -->|No| G[Print validation error]
+    F -->|Yes| H[ScheduleService.checkAvailability]
+    H --> I{Overlapping schedule exists?}
+    I -->|No| J[Print AVAILABLE result]
+    I -->|Yes| K[Find conflicts and same-area alternatives]
+    K --> L[Print OCCUPIED result]
+    J --> M[Pause, then return to menu]
+    L --> M
+    G --> M
 
-        AF --> AJ{Valid input and end after start?}
-        AJ -->|No| AK[Print validation error]
-        AJ -->|Yes| AL[ScheduleService.checkAvailability]
-        AL --> AM{Overlapping schedule exists?}
-        AM -->|No| AN[Print AVAILABLE result]
-        AM -->|Yes| AO[Find conflicts and same-area alternatives]
-        AO --> AP[Print OCCUPIED result]
-        AN --> AQ[Pause, then return to menu]
-        AP --> AQ
-        AK --> AQ
+    D -->|2. View room schedule| N[Read day and room]
+    N --> O[Find and print room schedule]
+    O --> P[Pause, then return to menu]
 
-        AG --> AR[Find and print room schedule]
-        AR --> AS[Pause, then return to menu]
-        AH --> AT[Run subject, section, or professor search]
-        AT --> AU[Print matching schedules]
-        AU --> AS
-        AI --> AV[Group and print day schedules]
-        AV --> AS
+    D -->|3. Search schedules| Q[Read search field and query]
+    Q --> R[Run subject, section, or professor search]
+    R --> S[Print matching schedules]
+    S --> P
 
-        AQ --> AD
-        AS --> AD
-        AE -->|Invalid choice| AW[Print error and return to menu]
-        AW --> AD
-        AE -->|0. Exit or input closes| AX([CLI program ends])
-    end
+    D -->|4. View all room schedules| T[Read day]
+    T --> U[Group and print day schedules]
+    U --> P
 
-    C -.->|If JavaFX cannot load, developer launches CLI separately| D
+    M --> C
+    P --> C
+    D -->|Invalid choice| V[Print error and return to menu]
+    V --> C
+    D -->|0. Exit or input closes| W([CLI program ends])
 ```
 
 ## Project structure

@@ -238,5 +238,11 @@ Release and extract it. Start the application using:
 - Linux: `ClassroomAvailability/bin/ClassroomAvailability`
 - Windows: `ClassroomAvailability\ClassroomAvailability.exe`
 
+Each package also includes a CLI launcher for developer use, manual testing,
+and fallback operation:
+
+- Linux: `ClassroomAvailability/bin/ClassroomAvailabilityCLI`
+- Windows: `ClassroomAvailability\ClassroomAvailabilityCLI.exe`
+
 The Linux and Windows packages must be built separately because JavaFX includes
 platform-specific native libraries.

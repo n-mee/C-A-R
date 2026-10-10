@@ -67,6 +67,7 @@ jobs:
             --main-class ui.JavaFxApp \
             --module-path javafx-modules \
             --add-modules javafx.controls,javafx.graphics,javafx.base \
+            --add-launcher ClassroomAvailabilityCLI=.jpackage/classroom-availability-cli.properties \
             --dest dist \
             --app-version "${GITHUB_REF_NAME#v}" \
             --vendor "C-A-R"
@@ -85,6 +86,7 @@ jobs:
             --main-class ui.JavaFxApp `
             --module-path javafx-modules `
             --add-modules javafx.controls,javafx.graphics,javafx.base `
+            --add-launcher ClassroomAvailabilityCLI=.jpackage\classroom-availability-cli.properties `
             --dest dist `
             --app-version $version `
             --vendor "C-A-R"
